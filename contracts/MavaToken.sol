@@ -1719,21 +1719,6 @@ contract MvvToken is Context, IERC20, Ownable {
         _tokenTransfer(from, to, amount, takeFee);
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
-        // approve token transfer to cover all possible scenarios
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
-
-        // add the liquidity
-        uniswapV2Router.addLiquidityETH{value: ethAmount}(
-            address(this),
-            tokenAmount,
-            0, // slippage is unavoidable
-            0, // slippage is unavoidable
-            owner(),
-            block.timestamp
-        );
-    }
-
     /**
      * @dev Takes fee, if takeFee is true
      */
