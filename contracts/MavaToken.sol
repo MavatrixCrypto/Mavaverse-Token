@@ -1151,6 +1151,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
+                uint256 currentRate = _getRate();
+                _rOwned[account] = _tOwned[account].mul(currentRate);
                 _tOwned[account] = 0;
                 _isExcluded[account] = false;
                 _excluded.pop();
