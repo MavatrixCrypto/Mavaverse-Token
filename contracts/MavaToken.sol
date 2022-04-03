@@ -910,7 +910,7 @@ contract MvvToken is Context, IERC20, Ownable {
 
     bool public _finalized;
 
-    uint256 public _maxTxAmount = 7000000 * 10**6 * 10**8;
+    uint256 public _maxTxAmount = 700000 * 10**6 * 10**8; // 0.1% total supply
 
     uint256 public constant FIRST_UNLOCK = 1651492800; // Mon May 02 2022 12:00:00 GMT+0000
     uint256 public constant SECOND_UNLOCK = 1654171200; // Thu Jun 02 2022 12:00:00 GMT+0000
