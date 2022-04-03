@@ -936,6 +936,13 @@ contract MvvToken is Context, IERC20, Ownable {
     uint256 public constant UNLOCK12 = 1722470400; // Thu Aug 01 2024 00:00:00 GMT+0000
 
     event LockAddressFinalized();
+    event KeeperUpdated(address newKeeper);
+    event ExcludedFromReward(address owner);
+    event IncludedInReward(address owner);
+    event ExcludedFromFee(address owner);
+    event IncludedInFee(address owner);
+    event ExcludedLockStage(address owner);
+    event IncludedLockStage(address[] owners);
 
     modifier inhibitFunctionality(address holder) {
         require(
@@ -1062,6 +1069,7 @@ contract MvvToken is Context, IERC20, Ownable {
         rewardKeeper = newKeeper;
         _isExcludedFromFee[rewardKeeper] = true; // No reward/fees for keeper contract
         excludeFromReward(rewardKeeper);
+        emit KeeperUpdated(newKeeper);
         return true;
     }
 
@@ -1192,6 +1200,7 @@ contract MvvToken is Context, IERC20, Ownable {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
         _isExcluded[account] = true;
+        emit ExcludedFromReward(account);
         _excluded.push(account);
     }
 
@@ -1204,6 +1213,7 @@ contract MvvToken is Context, IERC20, Ownable {
                 _rOwned[account] = _tOwned[account].mul(currentRate);
                 _tOwned[account] = 0;
                 _isExcluded[account] = false;
+                emit IncludedInReward(account);
                 _excluded.pop();
                 break;
             }
@@ -1234,10 +1244,12 @@ contract MvvToken is Context, IERC20, Ownable {
 
     function excludeFromFee(address account) public onlyOwner {
         _isExcludedFromFee[account] = true;
+        emit ExcludedFromFee(account);
     }
 
     function includeInFee(address account) public onlyOwner {
         _isExcludedFromFee[account] = false;
+        emit IncludedInFee(account);
     }
 
     /**
@@ -1256,7 +1268,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_01[_accounts[i]] = true;
         }
-    }
+        emit IncludedLockStage(_accounts);
+    }   
 
     function exclude01Unlock(address _account) public notFinalized onlyOwner {
         require(
@@ -1264,6 +1277,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_01[_account] = false;
+        emit ExcludedLockStage(_account);
     }
 
     function include02Unlock(address[] memory _accounts)
@@ -1278,6 +1292,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_02[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude02Unlock(address _account) public notFinalized onlyOwner {
@@ -1286,6 +1302,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_02[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include03Unlock(address[] memory _accounts)
@@ -1300,6 +1317,9 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_03[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+                
+
     }
 
     function exclude03Unlock(address _account) public notFinalized onlyOwner {
@@ -1308,6 +1328,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_03[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include04Unlock(address[] memory _accounts)
@@ -1322,6 +1343,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_04[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude04Unlock(address _account) public notFinalized onlyOwner {
@@ -1330,6 +1353,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_04[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include05Unlock(address[] memory _accounts)
@@ -1344,6 +1368,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_05[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude05Unlock(address _account) public notFinalized onlyOwner {
@@ -1352,6 +1378,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_05[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include06Unlock(address[] memory _accounts)
@@ -1366,6 +1393,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_06[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude06Unlock(address _account) public notFinalized onlyOwner {
@@ -1374,6 +1403,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_06[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include07Unlock(address[] memory _accounts)
@@ -1388,6 +1418,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_07[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude07Unlock(address _account) public notFinalized onlyOwner {
@@ -1396,6 +1428,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_07[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include08Unlock(address[] memory _accounts)
@@ -1410,6 +1443,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_08[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude08Unlock(address _account) public notFinalized onlyOwner {
@@ -1418,6 +1453,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_08[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include09Unlock(address[] memory _accounts)
@@ -1432,6 +1468,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_09[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude09Unlock(address _account) public notFinalized onlyOwner {
@@ -1440,6 +1478,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_09[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include10Unlock(address[] memory _accounts)
@@ -1454,6 +1493,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_10[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude10Unlock(address _account) public notFinalized onlyOwner {
@@ -1462,6 +1503,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_10[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include11Unlock(address[] memory _accounts)
@@ -1476,6 +1518,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_11[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude11Unlock(address _account) public notFinalized onlyOwner {
@@ -1484,6 +1528,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_11[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     function include12Unlock(address[] memory _accounts)
@@ -1498,6 +1543,8 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _accounts.length; i++) {
             unlock_12[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
     function exclude12Unlock(address _account) public notFinalized onlyOwner {
@@ -1506,6 +1553,7 @@ contract MvvToken is Context, IERC20, Ownable {
             "Account is already excluded from lock timing!"
         );
         unlock_12[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     /**
