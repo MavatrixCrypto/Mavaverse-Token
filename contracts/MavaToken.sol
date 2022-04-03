@@ -978,10 +978,12 @@ contract MvvToken is Context, IERC20, Ownable {
         rewardKeeper = keeper;
         _finalized = false;
 
-        //exclude owner and this contract from fee
+        //exclude owner, keeper and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[keeper] = true;
+
+        excludeFromReward(rewardKeeper); // exclude keeper from reward
 
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
