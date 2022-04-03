@@ -900,6 +900,9 @@ contract MvvToken is Context, IERC20, Ownable {
     uint256 public _keeperFee = 3;
     uint256 private _previousKeeperFee = _keeperFee;
 
+    uint256 private constant MAX_TAX_FEE = 3;
+    uint256 private constant MAX_KEEPER_FEE = 3;
+
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable uniswapV2Pair;
 
@@ -1009,7 +1012,7 @@ contract MvvToken is Context, IERC20, Ownable {
         require(newKeeper != address(0), "Not a valid address inserted");
         rewardKeeper = newKeeper;
         _isExcludedFromFee[rewardKeeper] = true; // No reward/fees for keeper contract
-        excludeFromReward(rewardKeeper); 
+        excludeFromReward(rewardKeeper);
         return true;
     }
 
@@ -1258,11 +1261,19 @@ contract MvvToken is Context, IERC20, Ownable {
     }
 
     function setTaxFeePercent(uint256 taxFee) external onlyOwner {
+        require(
+            taxFee <= MAX_TAX_FEE,
+            "Tax fee exceeds the maximum accepted value!"
+        );
         _taxFee = taxFee;
     }
 
-    function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
-        _keeperFee = liquidityFee;
+    function setKeeperFeePercent(uint256 keeperFee) external onlyOwner {
+        require(
+            keeperFee <= MAX_KEEPER_FEE,
+            "Keeper fee exceeds the maximum accepted value!"
+        );
+        _keeperFee = keeperFee;
     }
 
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
