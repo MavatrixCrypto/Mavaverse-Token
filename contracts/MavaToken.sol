@@ -454,8 +454,6 @@ library Address {
  */
 contract Ownable is Context {
     address private _owner;
-    address private _previousOwner;
-    uint256 private _lockTime;
 
     event OwnershipTransferred(
         address indexed previousOwner,
@@ -918,7 +916,7 @@ contract MvvToken is Context, IERC20, Ownable {
 
     bool public _finalized;
 
-    uint256 public _maxTxAmount = 700000 * 10**6 * 10**8; // 0.1% total supply
+    uint256 public _maxTxAmount = 7000 * 10**6 * 10**8; // 0.1% total supply
 
     uint256 public constant UNLOCK01 = 1661990400; // Thu Sep 01 2022 00:00:00 GMT+0000
     uint256 public constant UNLOCK02 = 1667264400; // Tue Nov 01 2022 01:00:00 GMT+0000
@@ -994,51 +992,51 @@ contract MvvToken is Context, IERC20, Ownable {
     function canTransfer(address _holder) public view returns (bool) {
         if (unlock_01[_holder] && block.timestamp < UNLOCK01)
             revert(
-                "You aren't allowed to call this function until FIRST-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK01 stage"
             );
         else if (unlock_02[_holder] && block.timestamp < UNLOCK02)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK02 stage"
             );
         else if (unlock_03[_holder] && block.timestamp < UNLOCK03)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK03 stage"
             );
         else if (unlock_04[_holder] && block.timestamp < UNLOCK04)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK04 stage"
             );
         else if (unlock_05[_holder] && block.timestamp < UNLOCK05)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK05 stage"
             );
         else if (unlock_06[_holder] && block.timestamp < UNLOCK06)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK06 stage"
             );
         else if (unlock_07[_holder] && block.timestamp < UNLOCK07)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK07 stage"
             );
         else if (unlock_08[_holder] && block.timestamp < UNLOCK08)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK08 stage"
             );
         else if (unlock_09[_holder] && block.timestamp < UNLOCK09)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK09 stage"
             );
         else if (unlock_10[_holder] && block.timestamp < UNLOCK10)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK10 stage"
             );
         else if (unlock_11[_holder] && block.timestamp < UNLOCK11)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK11 stage"
             );
         else if (unlock_12[_holder] && block.timestamp < UNLOCK12)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK12 stage"
             );
         return true;
     }
