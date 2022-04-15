@@ -454,8 +454,6 @@ library Address {
  */
 contract Ownable is Context {
     address private _owner;
-    address private _previousOwner;
-    uint256 private _lockTime;
 
     event OwnershipTransferred(
         address indexed previousOwner,
@@ -509,29 +507,6 @@ contract Ownable is Context {
         );
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
-    }
-
-    function geUnlockTime() public view returns (uint256) {
-        return _lockTime;
-    }
-
-    //Locks the contract for owner for the amount of time provided
-    function lock(uint256 time) public virtual onlyOwner {
-        _previousOwner = _owner;
-        _owner = address(0);
-        _lockTime = block.timestamp + time;
-        emit OwnershipTransferred(_owner, address(0));
-    }
-
-    //Unlocks the contract for owner when _lockTime is exceeds
-    function unlock() public virtual {
-        require(
-            _previousOwner == msg.sender,
-            "You don't have permission to unlock"
-        );
-        require(block.timestamp > _lockTime, "Contract is locked until 7 days");
-        emit OwnershipTransferred(_owner, _previousOwner);
-        _owner = _previousOwner;
     }
 }
 
@@ -900,10 +875,18 @@ contract MvvToken is Context, IERC20, Ownable {
 
     mapping(address => bool) private _isExcludedFromFee;
 
-    mapping(address => bool) public inFirstLock; // can't send tokens before due date
-    mapping(address => bool) public inSecondLock;
-    mapping(address => bool) public inThirdLock;
-    mapping(address => bool) public inFourthLock;
+    mapping(address => bool) public unlock_01; // can't send tokens before due date
+    mapping(address => bool) public unlock_02;
+    mapping(address => bool) public unlock_03;
+    mapping(address => bool) public unlock_04;
+    mapping(address => bool) public unlock_05;
+    mapping(address => bool) public unlock_06;
+    mapping(address => bool) public unlock_07;
+    mapping(address => bool) public unlock_08;
+    mapping(address => bool) public unlock_09;
+    mapping(address => bool) public unlock_10;
+    mapping(address => bool) public unlock_11;
+    mapping(address => bool) public unlock_12;
 
     mapping(address => bool) private _isExcluded;
     address[] private _excluded;
@@ -913,8 +896,8 @@ contract MvvToken is Context, IERC20, Ownable {
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string private constant _name = "Mavaverse Token";
-    string private constant _symbol = "MVV";
+    string private constant _name = "Mavaverse";
+    string private constant _symbol = "MVX";
     uint8 private constant _decimals = 8;
 
     uint256 public _taxFee = 3;
@@ -923,6 +906,9 @@ contract MvvToken is Context, IERC20, Ownable {
     uint256 public _keeperFee = 3;
     uint256 private _previousKeeperFee = _keeperFee;
 
+    uint256 private constant MAX_TAX_FEE = 3;
+    uint256 private constant MAX_KEEPER_FEE = 3;
+
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable uniswapV2Pair;
 
@@ -930,14 +916,31 @@ contract MvvToken is Context, IERC20, Ownable {
 
     bool public _finalized;
 
-    uint256 public _maxTxAmount = 7000000 * 10**6 * 10**8;
+    uint256 public _maxTxAmount = 7000 * 10**6 * 10**8; // 0.1% total supply
 
-    uint256 public constant FIRST_UNLOCK = 1651492800; // Mon May 02 2022 12:00:00 GMT+0000
-    uint256 public constant SECOND_UNLOCK = 1654171200; // Thu Jun 02 2022 12:00:00 GMT+0000
-    uint256 public constant THIRD_UNLOCK = 1656763200; // Sat Jul 02 2022 12:00:00 GMT+0000
-    uint256 public constant FOURTH_UNLOCK = 1659441600; // Tue Aug 02 2022 12:00:00 GMT+0000
+    uint256 public constant UNLOCK01 = 1661990400; // Thu Sep 01 2022 00:00:00 GMT+0000
+    uint256 public constant UNLOCK02 = 1667264400; // Tue Nov 01 2022 01:00:00 GMT+0000
+
+    uint256 public constant UNLOCK03 = 1672534800; // Sun Jan 01 2023 01:00:00 GMT+0000
+    uint256 public constant UNLOCK04 = 1677632400; // Wed Mar 01 2023 01:00:00 GMT+0000
+    uint256 public constant UNLOCK05 = 1682899200; // Mon May 01 2023 00:00:00 GMT+0000
+    uint256 public constant UNLOCK06 = 1688169600; // Sat Jul 01 2023 00:00:00 GMT+0000
+    uint256 public constant UNLOCK07 = 1693526400; // Fri Sep 01 2023 00:00:00 GMT+0000
+    uint256 public constant UNLOCK08 = 1698800400; // Wed Nov 01 2023 01:00:00 GMT+0000
+
+    uint256 public constant UNLOCK09 = 1704070800; // Mon Jan 01 2024 01:00:00 GMT+0000
+    uint256 public constant UNLOCK10 = 1709254800; // Fri Mar 01 2024 01:00:00 GMT+0000
+    uint256 public constant UNLOCK11 = 1714521600; // Wed May 01 2024 00:00:00 GMT+0000
+    uint256 public constant UNLOCK12 = 1722470400; // Thu Aug 01 2024 00:00:00 GMT+0000
 
     event LockAddressFinalized();
+    event KeeperUpdated(address newKeeper);
+    event ExcludedFromReward(address indexed owner);
+    event IncludedInReward(address owner);
+    event ExcludedFromFee(address owner);
+    event IncludedInFee(address owner);
+    event ExcludedLockStage(address owner);
+    event IncludedLockStage(address[] owners);
 
     modifier inhibitFunctionality(address holder) {
         require(
@@ -973,10 +976,12 @@ contract MvvToken is Context, IERC20, Ownable {
         rewardKeeper = keeper;
         _finalized = false;
 
-        //exclude owner and this contract from fee
+        //exclude owner, keeper and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[keeper] = true;
+
+        excludeFromReward(rewardKeeper); // exclude keeper from reward
 
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
@@ -985,23 +990,54 @@ contract MvvToken is Context, IERC20, Ownable {
      * @dev Check timing and spend allowance for locked accounts
      */
     function canTransfer(address _holder) public view returns (bool) {
-        if (inFirstLock[_holder] && block.timestamp < FIRST_UNLOCK) {
+        if (unlock_01[_holder] && block.timestamp < UNLOCK01)
             revert(
-                "You aren't allowed to call this function until FIRST-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK01 stage"
             );
-        } else if (inSecondLock[_holder] && block.timestamp < SECOND_UNLOCK) {
+        else if (unlock_02[_holder] && block.timestamp < UNLOCK02)
             revert(
-                "You aren't allowed to call this function until SECOND-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK02 stage"
             );
-        } else if (inThirdLock[_holder] && block.timestamp < THIRD_UNLOCK) {
+        else if (unlock_03[_holder] && block.timestamp < UNLOCK03)
             revert(
-                "You aren't allowed to call this function until THIRD-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK03 stage"
             );
-        } else if (inFourthLock[_holder] && block.timestamp < FOURTH_UNLOCK) {
+        else if (unlock_04[_holder] && block.timestamp < UNLOCK04)
             revert(
-                "You aren't allowed to call this function until FOURTH-STAGE unlock"
+                "You aren't allowed to call this function until UNLOCK04 stage"
             );
-        }
+        else if (unlock_05[_holder] && block.timestamp < UNLOCK05)
+            revert(
+                "You aren't allowed to call this function until UNLOCK05 stage"
+            );
+        else if (unlock_06[_holder] && block.timestamp < UNLOCK06)
+            revert(
+                "You aren't allowed to call this function until UNLOCK06 stage"
+            );
+        else if (unlock_07[_holder] && block.timestamp < UNLOCK07)
+            revert(
+                "You aren't allowed to call this function until UNLOCK07 stage"
+            );
+        else if (unlock_08[_holder] && block.timestamp < UNLOCK08)
+            revert(
+                "You aren't allowed to call this function until UNLOCK08 stage"
+            );
+        else if (unlock_09[_holder] && block.timestamp < UNLOCK09)
+            revert(
+                "You aren't allowed to call this function until UNLOCK09 stage"
+            );
+        else if (unlock_10[_holder] && block.timestamp < UNLOCK10)
+            revert(
+                "You aren't allowed to call this function until UNLOCK10 stage"
+            );
+        else if (unlock_11[_holder] && block.timestamp < UNLOCK11)
+            revert(
+                "You aren't allowed to call this function until UNLOCK11 stage"
+            );
+        else if (unlock_12[_holder] && block.timestamp < UNLOCK12)
+            revert(
+                "You aren't allowed to call this function until UNLOCK12 stage"
+            );
         return true;
     }
 
@@ -1032,7 +1068,8 @@ contract MvvToken is Context, IERC20, Ownable {
         require(newKeeper != address(0), "Not a valid address inserted");
         rewardKeeper = newKeeper;
         _isExcludedFromFee[rewardKeeper] = true; // No reward/fees for keeper contract
-        excludeFromReward(rewardKeeper); 
+        excludeFromReward(rewardKeeper);
+        emit KeeperUpdated(newKeeper);
         return true;
     }
 
@@ -1163,6 +1200,7 @@ contract MvvToken is Context, IERC20, Ownable {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
         _isExcluded[account] = true;
+        emit ExcludedFromReward(account);
         _excluded.push(account);
     }
 
@@ -1171,8 +1209,11 @@ contract MvvToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
+                uint256 currentRate = _getRate();
+                _rOwned[account] = _tOwned[account].mul(currentRate);
                 _tOwned[account] = 0;
                 _isExcluded[account] = false;
+                emit IncludedInReward(account);
                 _excluded.pop();
                 break;
             }
@@ -1196,24 +1237,26 @@ contract MvvToken is Context, IERC20, Ownable {
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);
-        _takeLiquidity(tLiquidity);
+        _takeRewardNFT(tLiquidity);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function excludeFromFee(address account) public onlyOwner {
         _isExcludedFromFee[account] = true;
+        emit ExcludedFromFee(account);
     }
 
     function includeInFee(address account) public onlyOwner {
         _isExcludedFromFee[account] = false;
+        emit IncludedInFee(account);
     }
 
     /**
      * @dev Include an address to locked list.
-     * Can only be called by the current operator. There are currently 4 lock stages
+     * Can only be called by the current operator. There are currently 12 lock stages
      */
-    function includeFirstStageUnlock(address[] memory _accounts)
+    function include01Unlock(address[] memory _accounts)
         public
         notFinalized
         onlyOwner
@@ -1223,11 +1266,21 @@ contract MvvToken is Context, IERC20, Ownable {
             "Lock Management: max lock amount per tx exceeded"
         );
         for (uint256 i = 0; i < _accounts.length; i++) {
-            inFirstLock[_accounts[i]] = true;
+            unlock_01[_accounts[i]] = true;
         }
+        emit IncludedLockStage(_accounts);
+    }   
+
+    function exclude01Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_01[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_01[_account] = false;
+        emit ExcludedLockStage(_account);
     }
 
-    function includeSecondStageUnlock(address[] memory _accounts)
+    function include02Unlock(address[] memory _accounts)
         public
         notFinalized
         onlyOwner
@@ -1237,25 +1290,22 @@ contract MvvToken is Context, IERC20, Ownable {
             "Lock Management: max lock amount per tx exceeded"
         );
         for (uint256 i = 0; i < _accounts.length; i++) {
-            inSecondLock[_accounts[i]] = true;
+            unlock_02[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+
     }
 
-    function includeThirdStageUnlock(address[] memory _accounts)
-        public
-        notFinalized
-        onlyOwner
-    {
+    function exclude02Unlock(address _account) public notFinalized onlyOwner {
         require(
-            _accounts.length <= 5,
-            "Lock Management: max lock amount per tx exceeded"
+            unlock_02[_account],
+            "Account is already excluded from lock timing!"
         );
-        for (uint256 i = 0; i < _accounts.length; i++) {
-            inThirdLock[_accounts[i]] = true;
-        }
+        unlock_02[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
-    function includeFourthStageUnlock(address[] memory _accounts)
+    function include03Unlock(address[] memory _accounts)
         public
         notFinalized
         onlyOwner
@@ -1265,8 +1315,245 @@ contract MvvToken is Context, IERC20, Ownable {
             "Lock Management: max lock amount per tx exceeded"
         );
         for (uint256 i = 0; i < _accounts.length; i++) {
-            inFourthLock[_accounts[i]] = true;
+            unlock_03[_accounts[i]] = true;
         }
+                emit IncludedLockStage(_accounts);
+                
+
+    }
+
+    function exclude03Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_03[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_03[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include04Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_04[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude04Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_04[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_04[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include05Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_05[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude05Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_05[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_05[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include06Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_06[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude06Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_06[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_06[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include07Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_07[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude07Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_07[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_07[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include08Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_08[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude08Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_08[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_08[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include09Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_09[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude09Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_09[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_09[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include10Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_10[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude10Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_10[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_10[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include11Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_11[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude11Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_11[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_11[_account] = false;
+         emit ExcludedLockStage(_account);
+    }
+
+    function include12Unlock(address[] memory _accounts)
+        public
+        notFinalized
+        onlyOwner
+    {
+        require(
+            _accounts.length <= 5,
+            "Lock Management: max lock amount per tx exceeded"
+        );
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            unlock_12[_accounts[i]] = true;
+        }
+                emit IncludedLockStage(_accounts);
+
+    }
+
+    function exclude12Unlock(address _account) public notFinalized onlyOwner {
+        require(
+            unlock_12[_account],
+            "Account is already excluded from lock timing!"
+        );
+        unlock_12[_account] = false;
+         emit ExcludedLockStage(_account);
     }
 
     /**
@@ -1281,14 +1568,26 @@ contract MvvToken is Context, IERC20, Ownable {
     }
 
     function setTaxFeePercent(uint256 taxFee) external onlyOwner {
+        require(
+            taxFee <= MAX_TAX_FEE,
+            "Tax fee exceeds the maximum accepted value!"
+        );
         _taxFee = taxFee;
     }
 
-    function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
-        _keeperFee = liquidityFee;
+    function setKeeperFeePercent(uint256 keeperFee) external onlyOwner {
+        require(
+            keeperFee <= MAX_KEEPER_FEE,
+            "Keeper fee exceeds the maximum accepted value!"
+        );
+        _keeperFee = keeperFee;
     }
 
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
+        require(
+            maxTxPercent > 0,
+            "Can't set max transaction amount multiplier to zero!"
+        );
         _maxTxAmount = _tTotal.mul(maxTxPercent).div(10**2);
     }
 
@@ -1391,7 +1690,7 @@ contract MvvToken is Context, IERC20, Ownable {
     /**
      * @dev take liquidity and forward it to the keeper account
      */
-    function _takeLiquidity(uint256 tLiquidity) private {
+    function _takeRewardNFT(uint256 tLiquidity) private {
         uint256 currentRate = _getRate();
         uint256 rLiquidity = tLiquidity.mul(currentRate);
         _rOwned[rewardKeeper] = _rOwned[rewardKeeper].add(rLiquidity);
@@ -1468,21 +1767,6 @@ contract MvvToken is Context, IERC20, Ownable {
         _tokenTransfer(from, to, amount, takeFee);
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
-        // approve token transfer to cover all possible scenarios
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
-
-        // add the liquidity
-        uniswapV2Router.addLiquidityETH{value: ethAmount}(
-            address(this),
-            tokenAmount,
-            0, // slippage is unavoidable
-            0, // slippage is unavoidable
-            owner(),
-            block.timestamp
-        );
-    }
-
     /**
      * @dev Takes fee, if takeFee is true
      */
@@ -1522,7 +1806,7 @@ contract MvvToken is Context, IERC20, Ownable {
         ) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);
-        _takeLiquidity(tLiquidity);
+        _takeRewardNFT(tLiquidity);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -1543,7 +1827,7 @@ contract MvvToken is Context, IERC20, Ownable {
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);
-        _takeLiquidity(tLiquidity);
+        _takeRewardNFT(tLiquidity);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -1564,7 +1848,7 @@ contract MvvToken is Context, IERC20, Ownable {
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);
-        _takeLiquidity(tLiquidity);
+        _takeRewardNFT(tLiquidity);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
