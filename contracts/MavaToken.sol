@@ -890,7 +890,7 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
     - Lock Stages - There are 4 different lock stages that'll inhibit `_transfer()` and `_approve()` functions;
 
 */
-contract MvvToken is Context, IERC20, Ownable {
+contract MvxToken is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
